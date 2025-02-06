@@ -1,0 +1,22 @@
+{
+  "name": "backend",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "build/src/index.js",
+  "types": "build/src/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "circuits": "workspace:*",
+    "fastify": "^5.2.1"
+  },
+  "devDependencies": {
+    "circuits": "workspace:*"
+  },
+  "peerDependencies": {
+    "circuits": "workspace:*"
+  }
+}
