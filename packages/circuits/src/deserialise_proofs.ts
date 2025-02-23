@@ -1,5 +1,5 @@
 import { Bool, Field, Group, UInt64 } from "o1js";
-import { NodeContent, MerkleWitness as CircuitMerkleWitness } from "./types";
+import { NodeContent, MerkleWitness as CircuitMerkleWitness } from "./types.js";
 import { readFileSync } from 'fs';
 interface NodeData {
     commitment: Array<number>;
@@ -40,7 +40,35 @@ export class DeserialiseProofs {
         return new NodeContent({ commitment: groupCommitment, hash: hashField })
     }
 
+    static nodeContentFromBuffer(commitmentBuffer: Buffer, hashBuffer: Buffer): NodeContent {
+        const commitemnt = groupFromCommitmentBuf(commitmentBuffer)
+        const hash = Field(beBytesToBigint(hashBuffer.reverse()))
+        return new NodeContent({ commitment: commitemnt, hash })
+    }
+
 }
+
+/**
+ * 
+ * @param commitment The commitment serialized array
+ * @returns Deserialise the group element
+ */
+function groupFromCommitmentBuf(commitment: Buffer): Group {
+    if (commitment.length != 65) {
+        throw Error("Invalid commitment bytes there should be exactly 65 bytes")
+    }
+    /// @dev these arrays are in little endian format as seen in the ser buffer of in arkworks-serialize
+    /// https://github.com/arkworks-rs/algebra/blob/9ce33e6ef1368a0f5b01b91e6df5bc5877129f30/ff/src/const_helpers.rs#L148
+    const x = beBytesToBigint(commitment.subarray(0, 32).reverse())
+    const y = beBytesToBigint(commitment.subarray(32, 64).reverse())
+    const yflags = commitment[64]
+    /// if the point is at infinity flag
+    if (yflags == 64) {
+        return Group.zero
+    }
+    return Group({ x, y })
+}
+
 /**
  * 
  * @param commitment The commitment serialized array

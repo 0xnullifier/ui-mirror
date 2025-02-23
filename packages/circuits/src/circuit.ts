@@ -1,5 +1,5 @@
 import { assert, Poseidon, Provable, ZkProgram } from "o1js";
-import { MerkleWitness, NodeContent } from "./types";
+import { MerkleWitness, NodeContent } from "./types.js";
 export const computeRoot = async (witness: MerkleWitness, userLeaf: NodeContent): Promise<{ publicOutput: NodeContent }> => {
     // the current x positon 
     assert(witness.lefts.length == witness.path.length, "The path length and left array do not match")

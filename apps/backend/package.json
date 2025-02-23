@@ -10,6 +10,8 @@
     "start": "node index.js"
   },
   "dependencies": {
+    "@grpc/grpc-js": "^1.12.6",
+    "@grpc/proto-loader": "^0.7.13",
     "circuits": "workspace:*",
     "fastify": "^5.2.1"
   },
