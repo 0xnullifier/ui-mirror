@@ -10,6 +10,10 @@ const config: Config = {
   darkMode: "class",
   theme: {
     extend: {
+      colors: {
+        "orange-mina": "#FF8A62",
+        "purple-mina": "#8E64CD",
+      },
       keyframes: {
         hide: {
           from: { opacity: "1" },

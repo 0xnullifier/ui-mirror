@@ -11,7 +11,7 @@ export default function Login() {
       <div className="flex flex-col justify-center items-center h-screen w-1/2">
         <div className="flex flex-col items-center justify-center h-screen gap-5 w-fit">
           <div className="flex flex-col justify-start items-start">
-            <p className="text-5xl text-orange-400">
+            <p className="text-5xl text-orange-mina">
               To Continue...
             </p>
             <p className="font-bold text-[#A0AEC0] px-2">Provide the credentials given by the Exchange</p>
@@ -26,7 +26,7 @@ export default function Login() {
               <Input placeholder="Your Password" id="accound-id" name="account-id" type="password" />
             </div>
           </div>
-          <Button className="bg-orange-400 w-[98%] font-semi-bold" variant="secondary">Sign In</Button>
+          <Button className="bg-orange-mina w-[98%] font-semi-bold rounded-2xl" variant="secondary">Sign In</Button>
         </div>
 
         <Footer />

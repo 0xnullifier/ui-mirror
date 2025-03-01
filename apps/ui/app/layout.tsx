@@ -15,7 +15,8 @@ export default function RootLayout({
 }>) {
   return (
     // add font to className, also add antialiased and dark mode
-    <html lang="en" className={`${GeistSans.className} antialiased dark:bg-white`}>
+    <html lang="en" className={`${GeistSans.className} antialiased bg-[#F8F9FA]`}>
+
       <body>
         {children}
       </body>
