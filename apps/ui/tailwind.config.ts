@@ -87,6 +87,10 @@ const config: Config = {
       drawerSlideRightAndFade: "drawerSlideRightAndFade 150ms ease-in",
     },
   },
-  plugins: [require("@tailwindcss/forms")],
+  plugins: [
+    require("@tailwindcss/forms"),
+    require('tailwind-scrollbar'),
+    require('tailwind-scrollbar-hide') // Optional for hiding scrollbars
+  ],
 }
 export default config

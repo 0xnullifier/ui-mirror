@@ -15,7 +15,7 @@ const Sidebar = () => {
                         height={40}
                         alt='logo'
                     />
-                    <p className='text-[1.5rem] font-semi-bold'>NetZero</p>
+                    <p className='text-[1.75rem] font-bold pl-10'>NetZero</p>
                 </div>
             </div>
             <div className='flex flex-col mt-7'>

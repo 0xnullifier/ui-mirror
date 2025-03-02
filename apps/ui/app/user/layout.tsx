@@ -1,14 +1,18 @@
+import { Footer } from "@/components/footer";
 import Sidebar from "@/components/sidebar";
 
 export default function UserScreensLayout(
     { children }: { children: React.ReactNode }
 ) {
     return (
-        <div className="flex flex-col h-full">
-            <div className="w-[350px] h-full">
-                <Sidebar />
+        <div className="flex h-screen justify-between flex-col">
+            <div className="flex">
+                <div className="w-[350px]">
+                    <Sidebar />
+                </div>
+                {children}
             </div>
-            {children}
+            <Footer />
         </div>
     )
 }
