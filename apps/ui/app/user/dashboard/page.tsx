@@ -117,9 +117,9 @@ const TokenTable = ({ data }: { data: TableData[] }) => {
                     {data.map((item, index) => (
                         <TableRow key={index} className="w-full font-extrabold">
                             <TableCell >{item.company}</TableCell>
-                            <TableCell className="text-center">{item.collateral}</TableCell>
-                            <TableCell className="text-center">{item.debt}</TableCell>
-                            <TableCell className="text-center">{item.equity}</TableCell>
+                            <TableCell className="text-center text-[1rem]">{item.collateral}</TableCell>
+                            <TableCell className="text-center text-[1rem]">{item.debt}</TableCell>
+                            <TableCell className="text-center text-[1rem]">{item.equity}</TableCell>
                             <TableCell className="flex justify-center">{item.includedInPOS ? (
                                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#68D391" className="size-6">
                                     <path fillRule="evenodd" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12Zm13.36-1.814a.75.75 0 1 0-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 0 0-1.06 1.06l2.25 2.25a.75.75 0 0 0 1.14-.094l3.75-5.25Z" clipRule="evenodd" />
@@ -140,11 +140,11 @@ const TokenTable = ({ data }: { data: TableData[] }) => {
 }
 
 
-export const CompanyRowItem = ({ name, icon, token }: { name: string, icon: string, token: string }) => {
+export const CompanyRowItem = ({ name, icon, token }: { name: string, icon: string, token?: string }) => {
     return (
-        <div className="flex justify-start items-center">
+        <div className="flex justify-start items-center text-[1.15rem]">
             <Image src={icon} alt="Dummy Cex" width={20} height={20} />
-            <span className="mx-2">{name}  <TokenText text={token} /></span>
+            <span className="mx-2">{name}  {token && <TokenText text={token} />}</span>
         </div>
     )
 }
