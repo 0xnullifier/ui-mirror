@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { GeistSans } from "geist/font/sans"; // import font
 import "../styles/globals.css";
 import { Footer } from "@/components/footer";
+import { CustodianDataWrapper } from "@/components/CustodianDataWrapper";
+import { Suspense } from "react";
 
 export const metadata: Metadata = {
   title: "NetZero",
@@ -16,10 +18,13 @@ export default function RootLayout({
   return (
     // add font to className, also add antialiased and dark mode
     <html lang="en" className={`${GeistSans.className} antialiased bg-[#F8F9FA]`}>
-
       <body>
-        {children}
+        <Suspense fallback={<div>loading...</div>}>
+          <CustodianDataWrapper>
+            {children}
+          </CustodianDataWrapper>
+        </Suspense>
       </body>
-    </html>
+    </html >
   );
 }

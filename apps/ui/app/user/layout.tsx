@@ -6,7 +6,7 @@ export default function UserScreensLayout(
 ) {
     return (
         <div className="flex h-screen justify-between flex-col">
-            <div className="flex">
+            <div className="flex justify-center items-center">
                 <div className="w-[350px]">
                     <Sidebar />
                 </div>

@@ -1,5 +1,5 @@
 "use client"
-import React, { useState } from "react";
+import React, { use, useEffect, useState } from "react";
 
 import { TokenText } from "@/components/token-name";
 import {
@@ -16,57 +16,83 @@ import Image from "next/image";
 import VerticalTimeline from "@/components/timeline";
 import { Card } from "@/components/card";
 import { useSearchParams } from "next/navigation";
+import { ChevronDown, Plus, X } from "lucide-react";
+import { Button } from '@/components/button';
+import {
+    Dialog,
+    DialogClose,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+} from "@/components/dialog";
+import { Input } from "@/components/input";
+import useStore from "@/lib/store";
 
+
+interface AssetEntry {
+    exchange: string;
+    asset: string;
+    collateral: string;
+    debt: string;
+}
 
 
 export default function Page(
 ) {
-    const tableData: TableData[] = [
-        {
-            company: <CompanyRowItem name="Dummy Cex" icon="/assets/mexc.svg" token="MINA" />,
-            collateral: "$2,000",
-            equity: "$14,000",
-            debt: "$12,000",
-            includedInPOS: true,
-        },
-        {
-            company: <CompanyRowItem name="Dummy Cex" icon="/assets/mexc.svg" token="ETH" />,
-            collateral: "$3,000",
-            equity: "$3,000",
-            debt: "$0",
-            includedInPOS: true,
-        },
-        {
-            company: <CompanyRowItem name="Dummy Cex" icon="/assets/mexc.svg" token="PNUT" />,
-            collateral: "--",
-            equity: "$500",
-            debt: "$500",
-            includedInPOS: true,
-        },
-        {
-            company: <CompanyRowItem name="Binance" icon="/assets/binance.svg" token="BTC" />,
-            collateral: "$32,000",
-            equity: "$32,000",
-            debt: "$0",
-            includedInPOS: true,
-        },
-        {
-            company: <CompanyRowItem name="Binance" icon="/assets/binance.svg" token="MINA" />,
-            collateral: "--",
-            equity: "$400",
-            debt: "$400",
-            includedInPOS: true,
-        },
-        {
-            company: <CompanyRowItem name="Gate.io" icon="/assets/gate-io.svg" token="PEPE" />,
-            collateral: "$600",
-            equity: "$7,600",
-            debt: "$7,000",
-            includedInPOS: false,
-        },
-    ];
+    const [tableData, setTableData] = useState<TableData[]>([]);
     const searchParams = useSearchParams()
     const userName = searchParams.get("user")
+    const [entries, setEntries] = useState<AssetEntry[]>([
+        { exchange: 'Binance', asset: 'BTC', collateral: '0.5', debt: '1000' }
+    ]);
+    const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
+    const { custodians } = useStore()
+    const [assets, setAssets] = useState<string[]>([]);
+
+
+    const addEntry = () => {
+        setEntries([...entries, { exchange: '', asset: '', collateral: '', debt: '' }]);
+    };
+
+    useEffect(() => {
+        if (selectedIndex == null) {
+            setAssets([])
+            return
+        }
+        setAssets(custodians[selectedIndex].assets)
+    }, [selectedIndex])
+
+    const removeEntry = (index: number) => {
+        const newEntries = [...entries];
+        newEntries.splice(index, 1);
+        setEntries(newEntries);
+    };
+
+    const updateEntry = (index: number, field: keyof AssetEntry, value: string) => {
+        const newEntries = [...entries];
+        newEntries[index][field] = value;
+        setEntries(newEntries);
+        if (field === 'exchange') {
+            const custodianIndex = custodians.findIndex(c => c.name === value) == -1 ? null : custodians.findIndex(c => c.name === value);
+            setSelectedIndex(custodianIndex)
+        }
+    };
+
+    const handleSave = () => {
+        const newTableData = entries.map((entry, index) => ({
+            company: <CompanyRowItem name={entry.exchange} icon={custodians[selectedIndex || 0].logo} token={entry.asset} />,
+            collateral: entry.collateral,
+            debt: entry.debt,
+            equity: (Number(entry.collateral) - Number(entry.debt)).toString(),
+        }));
+        setTableData((prev) => [...prev, ...newTableData]);
+        // set the tabledata in local storage
+        localStorage.setItem("tableData", JSON.stringify([...tableData, ...newTableData]));
+    }
+
     return (
         <div>
             {userName != null ? (
@@ -77,7 +103,124 @@ export default function Page(
                     </div>
                     <div className="w-full flex justify-center mt-10 gap-10 items-start">
                         <div className="flex flex-col bg-white p-[2rem] rounded-3xl">
-                            <p className="text-2xl mb-12 font-bold">Tokens</p>
+                            <div className="flex justify-between items-center mb-12">
+                                <p className="text-2xl font-bold text-center align-middle">Tokens</p>
+                                <Dialog>
+                                    <DialogTrigger asChild>
+                                        <Button variant="secondary"><Plus className="w-6 h-6" /></Button>
+                                    </DialogTrigger>
+                                    <DialogContent className="sm:max-w-3xl">
+                                        <DialogHeader>
+                                            <DialogTitle>Manage Exchange Entries</DialogTitle>
+                                        </DialogHeader>
+
+                                        <div className="mt-4 overflow-auto max-h-96">
+                                            <div className="flex flex-col gap-4">
+                                                <div className="grid grid-cols-12 gap-3 font-medium text-sm">
+                                                    <div className="col-span-3">Exchange</div>
+                                                    <div className="col-span-3">Asset</div>
+                                                    <div className="col-span-2">Collateral</div>
+                                                    <div className="col-span-2">Debt</div>
+                                                    <div className="col-span-2"></div>
+                                                </div>
+
+                                                {entries.map((entry, index) => (
+                                                    <div key={index} className="grid grid-cols-12 gap-3 items-center">
+                                                        <div className="col-span-3">
+                                                            <div className="relative">
+                                                                <select
+                                                                    className="w-full rounded-md border border-gray-300 bg-white py-2 pl-3 pr-10 text-sm border-none !outline-none  appearance-none decoration-transparent"
+                                                                    value={entry.exchange}
+                                                                    onChange={(e) => updateEntry(index, 'exchange', e.target.value)}
+                                                                >
+                                                                    <option value="">Select Exchange</option>
+                                                                    {custodians.map((ex, index) => (
+                                                                        <option key={ex.name} value={ex.name}>{ex.name}</option>
+                                                                    ))}
+                                                                </select>
+                                                                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
+                                                                    <ChevronDown className="h-4 w-4 text-gray-400" />
+                                                                </div>
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="col-span-3">
+                                                            <div className="relative">
+                                                                <select
+                                                                    className="w-full rounded-md border border-gray-300 bg-white py-2 pl-3 pr-10 text-sm focus:outline-none appearance-none"
+                                                                    value={entry.asset}
+                                                                    onChange={(e) => updateEntry(index, 'asset', e.target.value)}
+                                                                >
+                                                                    <option value="">Select Asset</option>
+                                                                    {assets.map((asset) => (
+                                                                        <option key={asset} value={asset}>{asset}</option>
+                                                                    ))}
+                                                                </select>
+                                                                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
+                                                                    <ChevronDown className="h-4 w-4 text-gray-400" />
+                                                                </div>
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="col-span-2">
+                                                            <Input
+                                                                type="text"
+                                                                placeholder="Collateral"
+                                                                value={entry.collateral}
+                                                                onChange={(e) => updateEntry(index, 'collateral', e.target.value)}
+                                                            />
+                                                        </div>
+
+                                                        <div className="col-span-2">
+                                                            <Input
+                                                                type="text"
+                                                                placeholder="Debt"
+                                                                value={entry.debt}
+                                                                onChange={(e) => updateEntry(index, 'debt', e.target.value)}
+                                                            />
+                                                        </div>
+
+                                                        <div className="col-span-2 flex justify-end">
+                                                            <Button
+                                                                variant="ghost"
+                                                                className="h-8 w-8 p-0"
+                                                                onClick={() => removeEntry(index)}
+                                                            >
+                                                                <X className="h-4 w-4 text-gray-500" />
+                                                            </Button>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+
+                                        <div className="mt-4">
+                                            <Button
+                                                variant="ghost"
+                                                className="w-full"
+                                                onClick={addEntry}
+                                            >
+                                                <Plus className="h-4 w-4 mr-2" /> Add Entry
+                                            </Button>
+                                        </div>
+
+                                        <DialogFooter className="mt-6">
+                                            <DialogClose asChild>
+                                                <Button
+                                                    variant="secondary"
+                                                    className="mr-2"
+                                                >
+                                                    Cancel
+                                                </Button>
+                                            </DialogClose>
+                                            <DialogClose asChild>
+                                                <Button onClick={handleSave}>Save Changes</Button>
+                                            </DialogClose>
+                                        </DialogFooter>
+                                    </DialogContent>
+                                </Dialog>
+
+                            </div>
                             <TokenTable data={tableData} />
                         </div>
                         <div>
@@ -96,7 +239,6 @@ interface TableData {
     collateral: string
     equity: string
     debt: string
-    includedInPOS: boolean
 }
 
 
@@ -110,7 +252,6 @@ const TokenTable = ({ data }: { data: TableData[] }) => {
                         <TableHeaderCell className="text-[#A0AEC0] font-semi-bold px-10">COLLATERAL </TableHeaderCell>
                         <TableHeaderCell className="text-[#A0AEC0] font-semi-bold px-10">DEBT</TableHeaderCell>
                         <TableHeaderCell className="text-[#A0AEC0] font-semi-bold px-10">EQUITY</TableHeaderCell>
-                        <TableHeaderCell className="text-[#A0AEC0] font-semi-bold ">INCLUDED IN POS</TableHeaderCell>
                     </TableRow>
                 </TableHead>
                 <TableBody >
@@ -120,17 +261,6 @@ const TokenTable = ({ data }: { data: TableData[] }) => {
                             <TableCell className="text-center text-[1rem]">{item.collateral}</TableCell>
                             <TableCell className="text-center text-[1rem]">{item.debt}</TableCell>
                             <TableCell className="text-center text-[1rem]">{item.equity}</TableCell>
-                            <TableCell className="flex justify-center">{item.includedInPOS ? (
-                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#68D391" className="size-6">
-                                    <path fillRule="evenodd" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12Zm13.36-1.814a.75.75 0 1 0-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 0 0-1.06 1.06l2.25 2.25a.75.75 0 0 0 1.14-.094l3.75-5.25Z" clipRule="evenodd" />
-                                </svg>
-                            )
-                                : (
-                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#FF070B" className="size-6">
-                                        <path fillRule="evenodd" d="M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25Zm-1.72 6.97a.75.75 0 1 0-1.06 1.06L10.94 12l-1.72 1.72a.75.75 0 1 0 1.06 1.06L12 13.06l1.72 1.72a.75.75 0 1 0 1.06-1.06L13.06 12l1.72-1.72a.75.75 0 1 0-1.06-1.06L12 10.94l-1.72-1.72Z" clipRule="evenodd" />
-                                    </svg>
-                                )}
-                            </TableCell>
                         </TableRow>
                     ))}
                 </TableBody>

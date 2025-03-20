@@ -1,12 +1,14 @@
 'use client';
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/button";
 import { Footer } from "@/components/footer";
 import { Input } from "@/components/input";
 import { Label } from "@radix-ui/react-label";
 import { motion, AnimatePresence } from "motion/react";
 import axios from "axios";
-import { SEND_OTP_URL, VERIFY_OTP_URL } from "@/lib/endpoint";
+import { CUSTODIAN_USER_VERIFICATION_URL, GET_CUSTODIANS_URL, SEND_OTP_URL, VERIFY_OTP_URL } from "@/lib/endpoint";
+import { redirect } from "next/navigation";
+import useStore from "@/lib/store";
 
 const LoadingScreen = () => (
   <motion.div
@@ -29,10 +31,12 @@ const LoadingScreen = () => (
   </motion.div>
 );
 
-const custodians = [
-  { name: "Custodian A", logo: "/assets/mexc.svg" },
-  { name: "Custodian B", logo: "/assets/binance.svg" },
-];
+
+interface Custodian {
+  name: string;
+  logo: string;
+  backendurl: string;
+}
 
 export default function Login() {
   const [step, setStep] = useState(1);
@@ -40,8 +44,8 @@ export default function Login() {
   const [email, setEmail] = useState("");
   const [otp, setOtp] = useState("");
   const [otpSent, setOtpSent] = useState(false);
-  const [selectedCustodians, setSelectedCustodians] = useState<string[]>([]);
-
+  const [selectedCustodians, setSelectedCustodians] = useState<Custodian[]>([]);
+  const { custodians, setCustodians } = useStore()
   const sendOtp = async () => {
     console.log("Sending OTP to:", email);
     if (!otpSent) {
@@ -76,17 +80,39 @@ export default function Login() {
     }
   }
 
-  const handleCustodianSelect = (name: string) => {
+  const handleCustodianSelect = (index: number) => {
     setSelectedCustodians((prev) =>
-      prev.includes(name)
-        ? prev.filter((custodian) => custodian !== name)
-        : [...prev, name]
+      prev.includes(custodians[index])
+        ? prev.filter((custodian) => custodian !== custodians[index])
+        : [...prev, custodians[index]]
     );
   };
 
   const handleProceed = () => {
-
+    setLoading(true)
+    selectedCustodians.forEach(async (custodian) => {
+      const response = await axios.get(CUSTODIAN_USER_VERIFICATION_URL(custodian.backendurl, email))
+      console.log(response.data)
+      if (response.data.found) {
+        // set the custodian verification status in local storage
+        // we do not send user details anywhere else
+        localStorage.setItem(custodian.name, JSON.stringify(true))
+      } else {
+        alert("User not found")
+      }
+    })
+    setLoading(false)
+    redirect(`/user/dashboard?user=${email.split("@")[0]}`)
   };
+
+  // load the custodians from the backend
+  useEffect(() => {
+    const fetchCustodians = async () => {
+      const newCustodians = await axios.get(GET_CUSTODIANS_URL)
+      setCustodians(newCustodians.data.exchanges)
+    }
+    fetchCustodians()
+  }, [])
 
   return (
     <div className="flex w-full h-screen">
@@ -140,14 +166,14 @@ export default function Login() {
                 </div>
 
                 <div className="flex flex-wrap gap-4">
-                  {custodians.map((custodian) => (
+                  {custodians.map((custodian, index) => (
                     <div
                       key={custodian.name}
-                      className={`p-4 border rounded-lg cursor-pointer ${selectedCustodians.includes(custodian.name)
+                      className={`p-4 border rounded-lg cursor-pointer ${selectedCustodians.includes(custodian)
                         ? "border-orange-mina"
                         : "border-gray-300"
                         }`}
-                      onClick={() => handleCustodianSelect(custodian.name)}
+                      onClick={() => handleCustodianSelect(index)}
                     >
                       <img
                         src={custodian.logo}

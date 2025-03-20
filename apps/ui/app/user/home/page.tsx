@@ -160,7 +160,6 @@ const chartdata = [
 ]
 
 export const Chart = () => {
-
     return (
         <div className="flex flex-col gap-16 bg-white px-10 py-20 rounded-3xl w-[50%] h-full center">
             <p className="text-2xl font-bold">Proofs Generated</p>

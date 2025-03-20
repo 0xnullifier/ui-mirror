@@ -3,12 +3,12 @@ import { UserIcon, HomeIcon, QuestionMarkCircleIcon } from "@heroicons/react/24/
 import { Card } from './card';
 import { Button } from './button';
 import Image from 'next/image';
-
+import Link from 'next/link';
 const Sidebar = () => {
     return (
         <div className='p-10'>
             <div>
-                <div className='flex justify-start items-center gap-2'>
+                <Link href='/user/home' className='flex justify-start items-center gap-3'>
                     <Image
                         src="/assets/group.svg"
                         width={40}
@@ -16,7 +16,7 @@ const Sidebar = () => {
                         alt='logo'
                     />
                     <p className='text-[1.75rem] font-bold pl-10'>NetZero</p>
-                </div>
+                </Link>
             </div>
             <div className='flex flex-col mt-7'>
                 <div
