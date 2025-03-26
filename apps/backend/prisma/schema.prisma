@@ -26,7 +26,6 @@ model Custodian {
   backendurl     String
   apiKey         String
   ProofAnalytics ProofAnalytics[]
-  UserCustodian  UserCustodian[]
 }
 
 model ProofAnalytics {
@@ -40,10 +39,9 @@ model ProofAnalytics {
 }
 
 model User {
-  id            Int             @id @default(autoincrement())
-  email         String          @unique
-  UserCustodian UserCustodian[]
-  OTP           OTP[]
+  id    Int    @id @default(autoincrement())
+  email String @unique
+  OTP   OTP[]
 }
 
 model OTP {
@@ -52,13 +50,4 @@ model OTP {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   otp       String
   createdAt DateTime @default(now())
-}
-
-model UserCustodian {
-  userId      Int
-  custodianId Int
-  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  custodian   Custodian @relation(fields: [custodianId], references: [id], onDelete: Cascade)
-
-  @@id([userId, custodianId])
 }

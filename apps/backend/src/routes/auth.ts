@@ -29,10 +29,8 @@ export default async function (fastify: FastifyInstance) {
         }
 
         try {
-            // Generate OTP
             const otp = await otpService.createOtp(email);
 
-            // Send email with OTP
             await fastify.mailer.sendMail({
                 to: email,
                 subject: 'Your Login OTP',
@@ -46,7 +44,7 @@ export default async function (fastify: FastifyInstance) {
             </div>
             <p>This OTP is valid for ${config.OTP_EXPIRY_MINUTES} minutes.</p>
             <p>If you didn't request this code, please ignore this email.</p>
-            <p>Best regards,<br>Your App Team</p>
+            <p>Best regards,<br>NetZero</p>
           </div>
         `
             });
