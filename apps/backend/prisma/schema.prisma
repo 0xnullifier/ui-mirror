@@ -20,12 +20,15 @@ enum Status {
 }
 
 model Custodian {
-  id             Int              @id @default(autoincrement())
-  name           String
-  logo           String
-  backendurl     String
-  apiKey         String
-  ProofAnalytics ProofAnalytics[]
+  id                      Int              @id @default(autoincrement())
+  name                    String
+  logo                    String
+  backendurl              String
+  apiKey                  String
+  liabilitiesZkAppAddress String           @default("")
+  assetsZkAppAddress      String           @default("")
+  posZkAppAddress         String           @default("")
+  ProofAnalytics          ProofAnalytics[]
 }
 
 model ProofAnalytics {

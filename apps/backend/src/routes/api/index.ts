@@ -5,11 +5,14 @@ import { FastifyPluginAsync } from "fastify"
 const api: FastifyPluginAsync = async (fastify, opts): Promise<void> => {
 
   fastify.get("/exchanges", async function (request, reply) {
-    const exchanges = (await fastify.prisma.custodian.findMany()).map((exchange) => {
+    const exchanges = (await fastify.prisma.custodian.findMany()).map((exchange: any) => {
       return {
         name: exchange.name,
         logo: exchange.logo,
         backendurl: exchange.backendurl,
+        liabilitiesZkAppAddress: exchange.liabilitiesZkAppAddress,
+        assetsZkAppAddress: exchange.assetsZkAppAddress,
+        posZkAppAddress: exchange.posZkAppAddress,
       }
     })
     if (!exchanges) {
@@ -43,6 +46,46 @@ const api: FastifyPluginAsync = async (fastify, opts): Promise<void> => {
     })
     return reply.status(200).send({ message: "Exchange created successfully", exchange })
   })
+
+  // fastify.post("/exchange/contract", async function (request, reply) {
+  //   const { id, liabilitiesZkAppAddress, assetsZkAppAddress, posZkAppAddress } = request.body as { id: number, liabilitiesZkAppAddress: string, assetsZkAppAddress: string, posZkAppAddress: string }
+  //   const apiKey = request.headers["x-api-key"] as string;
+  //   if (!apiKey) {
+  //     return reply.status(401).send({ message: "API key is required" })
+  //   }
+  //   const custodian = await fastify.prisma.custodian.findFirst({
+  //     where: {
+  //       id,
+  //       apiKey
+  //     }
+  //   })
+  //   if (!custodian) {
+  //     return reply.status(403).send({ message: "Invalid API key or custodian not found" })
+  //   }
+  //   if (!id) {
+  //     return reply.status(400).send({ message: "Id is required" })
+  //   }
+  //   if (!liabilitiesZkAppAddress) {
+  //     return reply.status(400).send({ message: "Liabilities zkApp address is required" })
+  //   }
+  //   if (!assetsZkAppAddress) {
+  //     return reply.status(400).send({ message: "Assets zkApp address is required" })
+  //   }
+  //   if (!posZkAppAddress) {
+  //     return reply.status(400).send({ message: "POS zkApp address is required" })
+  //   }
+  //   const exchange = await fastify.prisma.custodian.update({
+  //     where: {
+  //       id
+  //     },
+  //     data: {
+  //       liabilitiesZkAppAddress,
+  //       assetsZkAppAddress,
+  //       posZkAppAddress
+  //     }
+  //   })
+  //   return reply.status(200).send({ message: "Exchange updated successfully", exchange })
+  // })
 
   fastify.post("/exchange/update", async function (request, reply) {
     const { id, backendurl } = request.body as { id: number, backendurl: string }

@@ -107,19 +107,27 @@ export default async function (fastify: FastifyInstance) {
             const token = fastify.jwt.sign({
                 userId: user.id,
                 email: user.email
-            }, {
-                expiresIn: '7d'
             });
 
-            return {
-                success: true,
-                message: 'OTP verified successfully',
-                user: {
-                    id: user.id,
-                    email: user.email
-                },
-                token
-            };
+
+            reply
+                .setCookie('token', token, {
+                    domain: 'localhost:16001',
+                    path: '/',
+                    secure: true, // send cookie over HTTPS only
+                    httpOnly: true,
+                    sameSite: true // alternative CSRF protection
+                })
+
+                .send({
+                    success: true,
+                    message: 'OTP verified successfully',
+                    user: {
+                        id: user.id,
+                        email: user.email
+                    },
+                    token
+                });
         } catch (error) {
             request.log.error(error);
             return reply.code(500).send({
@@ -132,9 +140,11 @@ export default async function (fastify: FastifyInstance) {
     // Get current user
     fastify.get('/api/user', {
         preValidation: async (request, reply) => {
+            console.log(request.cookies)
             try {
                 await request.jwtVerify();
             } catch (err) {
+                console.log(err)
                 reply.code(401).send({
                     success: false,
                     message: 'Unauthorized'
