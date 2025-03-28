@@ -89,19 +89,20 @@ export default function Login() {
   };
 
   const handleProceed = () => {
-    setLoading(true)
-    selectedCustodians.forEach(async (custodian) => {
-      const response = await axios.get(CUSTODIAN_USER_VERIFICATION_URL(custodian.backendurl, email))
-      console.log(response.data)
-      if (response.data.found) {
-        // set the custodian verification status in local storage
-        // we do not send user details anywhere else
-        localStorage.setItem(custodian.name, JSON.stringify(true))
-      } else {
-        alert("User not found")
-      }
-    })
-    setLoading(false)
+    console.log("hello")
+    // setLoading(true)
+    // selectedCustodians.forEach(async (custodian) => {
+    //   const response = await axios.get(CUSTODIAN_USER_VERIFICATION_URL(custodian.backendurl, email))
+    //   console.log(response.data)
+    //   if (response.data.found) {
+    //     // set the custodian verification status in local storage
+    //     // we do not send user details anywhere else
+    //     localStorage.setItem(custodian.name, JSON.stringify(true))
+    //   } else {
+    //     alert("User not found")
+    //   }
+    // })
+    // setLoading(false)
     redirect(`/user/dashboard?user=${email.split("@")[0]}`)
   };
 

@@ -6,9 +6,21 @@ export interface Custodian {
     logo: string;
     backendurl: string;
     assets: string[];
+    liabilitiesZkAppAddress: string;
+    assetsZkAppAddress: string;
+    posZkAppAddress: string;
 }
+
+export interface User {
+    id: string;
+    email: string;
+}
+
+
 interface Store {
     custodians: Custodian[];
+    user: User | null;
+    setUser: (user: User | null) => void;
     setCustodians: (custodians: Custodian[]) => void;
     addCustodian: (custodian: Custodian) => void;
     removeCustodian: (custodian: Custodian) => void;
@@ -26,5 +38,9 @@ const useStore = create<Store>((set) => ({
             custodians: state.custodians.filter((c) => c !== custodian),
         })),
     clearCustodians: () => set({ custodians: [] }),
+    user: null,
+    setUser: (user: User | null) => set({
+        user
+    })
 }))
 export default useStore
