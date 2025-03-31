@@ -4,11 +4,14 @@ import "../styles/globals.css";
 import { Footer } from "@/components/footer";
 import { CustodianDataWrapper } from "@/components/CustodianDataWrapper";
 import { Suspense } from "react";
+import { Toaster } from "@/components/Toaster";
 
 export const metadata: Metadata = {
   title: "NetZero",
   description: "Proof of Solvency platform built on MINA Protocol",
 };
+
+
 
 export default function RootLayout({
   children,
@@ -19,6 +22,7 @@ export default function RootLayout({
     // add font to className, also add antialiased and dark mode
     <html lang="en" className={`${GeistSans.className} antialiased bg-[#F8F9FA]`}>
       <body>
+        <Toaster />
         <Suspense fallback={<div>loading...</div>}>
           <CustodianDataWrapper>
             {children}

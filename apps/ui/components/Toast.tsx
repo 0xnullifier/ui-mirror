@@ -1,5 +1,5 @@
 // Tremor Toast [v0.0.4]
-
+"use client"
 import React from "react"
 import * as ToastPrimitives from "@radix-ui/react-toast"
 import {

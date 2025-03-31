@@ -12,8 +12,8 @@
   },
   "dependencies": {
     "@heroicons/react": "^2.2.0",
-    "@netzero/circuits": "^0.0.2",
-    "@netzero/contracts": "^0.1.2",
+    "@netzero/circuits": "^0.0.3",
+    "@netzero/contracts": "^0.1.4",
     "@netzero/por_circuits": "^0.0.3",
     "@radix-ui/react-dialog": "^1.1.6",
     "@radix-ui/react-label": "^2.1.2",
@@ -21,6 +21,7 @@
     "@radix-ui/react-toast": "^1.2.6",
     "@radix-ui/react-toggle": "^1.1.2",
     "@radix-ui/react-toggle-group": "^1.1.2",
+    "@radix-ui/react-tooltip": "^1.1.8",
     "@remixicon/react": "^4.6.0",
     "@repo/eslint-config": "workspace:*",
     "@repo/typescript-config": "workspace:*",

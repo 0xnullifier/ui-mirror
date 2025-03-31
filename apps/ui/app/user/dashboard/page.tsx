@@ -16,7 +16,7 @@ import Image from "next/image";
 import VerticalTimeline from "@/components/timeline";
 import { Card } from "@/components/card";
 import { useSearchParams } from "next/navigation";
-import { ChevronDown, Plus, X } from "lucide-react";
+import { ChevronDown, Plus, Upload, X } from "lucide-react";
 import { Button } from '@/components/button';
 import {
     Dialog,
@@ -35,6 +35,10 @@ import { CUSTODIAN_INCLUSION_PROOFS } from "@/lib/endpoint";
 import { Bool, fetchAccount, Field, Group, Mina, PublicKey, UInt32 } from "o1js"
 import { NetZeroLiabilitiesVerifier } from "@netzero/contracts"
 import { InclusionProofProgram, rangeCheckProgram, MerkleWitness, NodeContent, UserParams } from "@netzero/circuits"
+import { Tooltip } from "@/components/Tooltip";
+import { TableData } from "@/lib/types";
+import { handleGenerateAndVerify } from "@/lib/actions";
+import { useToast } from "@/lib/hooks/useToast";
 
 const PRECISION = 1e5
 interface AssetEntry {
@@ -59,7 +63,11 @@ export default function Page(
     const { custodians } = useStore()
     const [assets, setAssets] = useState<string[]>([]);
     const [selectedExchanges, setSelectedExchanges] = useState<Custodian[]>([]);
-    const [transactionLink, setTransactionLink] = useState<string | null>(null);
+    const [csvData, setCsvData] = useState<string>("");
+    const [csvDialogOpen, setCsvDialogOpen] = useState(false);
+
+    const { toast } = useToast()
+
     const addEntry = () => {
         setEntries([...entries, { exchange: '', asset: '', collateral: '', debt: '' }]);
     };
@@ -118,135 +126,64 @@ export default function Page(
 
     useEffect(() => {
         (async () => {
-            console.time("Mina instance set and compiling");
             Mina.setActiveInstance(Mina.Network({ mina: 'https://api.minascan.io/node/devnet/v1/graphql', networkId: 'testnet' }));
-            console.timeEnd("Mina instance set and compiling");
-            console.log("inclusion program")
-
         })()
     }, [])
 
-    const handleGenerateAndVerify = async (exchange: Custodian) => {
-        //TODO: remove hardcode
-        const userId = BigInt('0x' + await hash("jane.williams29@protonmail.com")).toString();
-        const result = await axios.post(CUSTODIAN_INCLUSION_PROOFS(exchange.backendurl), {
-            userId
-        });
-        console.log(result.data);
-        console.log(exchange.liabilitiesZkAppAddress)
-
-
-
-        const { account, error } = await fetchAccount({ publicKey: exchange.liabilitiesZkAppAddress });
-        if (error) {
-            console.error("Error fetching account:", error);
-            return;
+    const canUploadCsvData = (entry: AssetEntry) => {
+        if (entry.exchange === "") {
+            toast({
+                title: "Please select exchange",
+                description: "You need to select exchange before uploading",
+                variant: "error"
+            })
+            setCsvDialogOpen(false);
+            return
         }
-        console.log(account)
-        const zkApp = new NetZeroLiabilitiesVerifier(PublicKey.fromBase58(exchange.liabilitiesZkAppAddress));
-        const saltS = zkApp.saltS.get().toString()
-        const saltB = zkApp.saltB.get().toString()
-        console.log(saltB);
-        console.log(saltS);
-
-        console.time("range check program")
-        await rangeCheckProgram.compile()
-        console.timeEnd("range check program")
-        console.time("Inclusion proof program compile");
-        await InclusionProofProgram.compile()
-        console.timeEnd("Inclusion proof program compile");
-        console.time("contract compile")
-        await NetZeroLiabilitiesVerifier.compile()
-        console.timeEnd("contract compile")
-
-        let path: NodeContent[] = result.data.proof.path.map((p: { commitment: { x: string, y: string }, hash: string }) => {
-            return new NodeContent({ commitment: Group.fromJSON(p.commitment), hash: Field.fromJSON(p.hash) })
-        })
-        for (let i = path.length; i < 32; i++) {
-            path.push(new NodeContent({ commitment: Group.zero, hash: Field(0) }))
-        }
-        let lefts = result.data.proof.lefts.map((l: boolean) => Bool.fromValue(l))
-        for (let i = lefts.length; i < 32; i++) {
-            lefts.push(Bool.fromValue(false))
-        }
-
-        const merkleWitness: MerkleWitness = new MerkleWitness({
-            path,
-            lefts
-        })
-        console.log(merkleWitness)
-
-
-        const blindingFactor = Field(result.data.blindingFactor)
-        // const userSecret = await hkdf(BigInt(saltS), null, BigInt(result.data.masterSecret))
-        const userSecret = Field(result.data.masterSecret)
-        console.log(tableData)
-        const relevantEntries = tableData
-            ///@ts-ignore
-            .filter(entry => entry.company.props.name === exchange.name)
-        console.log(relevantEntries)
-        const balances = relevantEntries
-            .map(entry => Field(BigInt(Math.floor(Number(entry.equity) * PRECISION))))
-        for (let i = balances.length; i < 100; i++) {
-            balances.push(Field(0))
-        }
-
-        const userParams = new UserParams({
-            balances,
-            blindingFactor,
-            userSecret,
-            userId: Field(userId),
-        })
-        console.log(userParams)
-
-        console.time("generating proof new")
-        // generate proof
-        const { proof } = await InclusionProofProgram.inclusionProof(merkleWitness, userParams)
-        console.timeEnd("generating proof new")
-
-        setTransactionLink(null);
-
-        try {
-            // Retrieve Mina provider injected by browser extension wallet
-            const mina = (window as any).mina;
-            const walletKey: string = (await mina.requestAccounts())[0];
-            console.log("Connected wallet address: " + walletKey);
-            await fetchAccount({ publicKey: PublicKey.fromBase58(walletKey) });
-
-            const transaction = await Mina.transaction(async () => {
-                console.log("Executing zkApp.verifyInclusion() locally");
-                await zkApp.verifyInclusion(proof)
-            });
-
-            // Prove execution of the contract using the proving key
-            await transaction.prove();
-
-            // Broadcast the transaction to the Mina network
-            console.log("Broadcasting proof of execution to the Mina network");
-            const { hash } = await mina.sendTransaction({ transaction: transaction.toJSON() });
-
-            // display the link to the transaction
-            const transactionLink = "https://minascan.io/devnet/tx/" + hash;
-            setTransactionLink(transactionLink);
-        } catch (e: any) {
-            console.error(e.message);
-            let errorMessage = "";
-
-            if (e.message.includes("Cannot read properties of undefined (reading 'requestAccounts')")) {
-                errorMessage = "Is Auro installed?";
-            } else if (e.message.includes("Please create or restore wallet first.")) {
-                errorMessage = "Have you created a wallet?";
-            } else if (e.message.includes("User rejected the request.")) {
-                errorMessage = "Did you grant the app permission to connect?";
-            } else {
-                errorMessage = "An unknown error occurred.";
-            }
-            console.log(errorMessage);
-        }
+        setCsvDialogOpen(true);
     }
 
+    const handleCsvData = (entry: AssetEntry) => {
+        if (csvData) {
+            const rows = csvData.split("\n").map(row => row.split(/\s+|,/));
+            console.log(rows)
+            const parsedEntries = rows.map(([asset, value, debt]) => {
+                const isValidAsset = custodians.some(custodian =>
+                    custodian.name === entry.exchange && custodian.assets.includes(asset.trim())
+                );
 
-
+                if (!isValidAsset) {
+                    toast({
+                        title: "Invalid Asset",
+                        description: `The asset "${asset.trim()}" is not valid for the selected exchange.`,
+                        variant: "error"
+                    });
+                    return undefined
+                }
+                return {
+                    exchange: entry.exchange,
+                    asset: asset.trim(),
+                    collateral: value.trim(),
+                    debt: debt.trim(), // Default debt to 0
+                }
+            }
+            );
+            // pop the last entry from where this was set and then 
+            setEntries(prevEntries => {
+                const validEntries = parsedEntries.filter((entry): entry is AssetEntry => entry !== undefined);
+                const newEntries = [...prevEntries];
+                newEntries.pop();
+                return [...newEntries, ...validEntries];
+            });
+            setCsvDialogOpen(false)
+        } else {
+            toast({
+                title: "Please enter csv data",
+                description: "You need to enter csv data before uploading",
+                variant: "error"
+            })
+        }
+    }
     return (
         <div>
             {userName != null ? (
@@ -333,16 +270,68 @@ export default function Page(
                                                                 onChange={(e) => updateEntry(index, 'debt', e.target.value)}
                                                             />
                                                         </div>
+                                                        {entry.asset !== "" ?
+                                                            (
+                                                                <div className="col-span-2 flex justify-end">
+                                                                    <Button
+                                                                        variant="ghost"
+                                                                        className="h-8 w-8 p-0"
+                                                                        onClick={() => removeEntry(index)}
+                                                                    >
+                                                                        <X className="h-4 w-4 text-gray-500" />
+                                                                    </Button>
+                                                                </div>
 
-                                                        <div className="col-span-2 flex justify-end">
-                                                            <Button
-                                                                variant="ghost"
-                                                                className="h-8 w-8 p-0"
-                                                                onClick={() => removeEntry(index)}
-                                                            >
-                                                                <X className="h-4 w-4 text-gray-500" />
-                                                            </Button>
-                                                        </div>
+                                                            )
+                                                            : (
+                                                                <div className="col-span-2 flex justify-end relative">
+                                                                    <Dialog open={csvDialogOpen} >
+                                                                        <DialogTrigger asChild>
+                                                                            <Tooltip content="Upload data as csv" className="z-[1050]" asChild>
+                                                                                <Button
+                                                                                    variant="ghost"
+                                                                                    className="h-8 w-8 p-0"
+                                                                                    onClick={() => canUploadCsvData(entry)}
+                                                                                >
+                                                                                    <Upload className="h-4 w-4 text-gray-500" />
+                                                                                </Button>
+                                                                            </Tooltip>
+                                                                        </DialogTrigger>
+                                                                        <DialogContent className="sm:max-w-3xl">
+                                                                            <DialogHeader>
+                                                                                <DialogTitle>Upload CSV Data</DialogTitle>
+                                                                            </DialogHeader>
+                                                                            <div className="mt-4">
+                                                                                <textarea
+                                                                                    className="w-full h-40 p-2 border border-gray-300 rounded-md"
+                                                                                    placeholder="Enter CSV data as AssetName, Value"
+                                                                                    value={csvData}
+                                                                                    onChange={(e) => setCsvData(e.target.value)}
+                                                                                ></textarea>
+                                                                            </div>
+                                                                            <DialogFooter className="mt-6">
+                                                                                <DialogClose asChild>
+                                                                                    <Button
+                                                                                        variant="secondary"
+                                                                                        className="mr-2"
+                                                                                        onClick={() => setCsvDialogOpen(false)}
+                                                                                    >
+                                                                                        Cancel
+                                                                                    </Button>
+                                                                                </DialogClose>
+                                                                                <Button
+                                                                                    onClick={() => handleCsvData(entry)}
+                                                                                >
+                                                                                    Set
+                                                                                </Button>
+                                                                            </DialogFooter>
+                                                                        </DialogContent>
+                                                                    </Dialog>
+                                                                </div>
+
+                                                            )
+                                                        }
+
                                                     </div>
                                                 ))}
                                             </div>
@@ -382,7 +371,7 @@ export default function Page(
                                         key={index}
                                         variant="primary"
                                         className="mb-2"
-                                        onClick={() => handleGenerateAndVerify(exchange)}
+                                        onClick={() => handleGenerateAndVerify(exchange, tableData)}
                                     >
                                         Gen&Verify {exchange.name}
                                     </Button>
@@ -399,13 +388,7 @@ export default function Page(
     )
 }
 
-interface TableData {
-    // with icon the and the style
-    company: React.ReactNode,
-    collateral: string
-    equity: string
-    debt: string
-}
+
 
 
 const TokenTable = ({ data }: { data: TableData[] }) => {
@@ -589,59 +572,3 @@ export const Hi = ({ userName }: { userName: string }) => {
     )
 }
 
-
-function hash(string: string) {
-    const utf8 = new TextEncoder().encode(string);
-    return crypto.subtle.digest('SHA-256', utf8).then((hashBuffer) => {
-        const hashArray = Array.from(new Uint8Array(hashBuffer));
-        const hashHex = hashArray
-            .map((bytes) => bytes.toString(16).padStart(2, '0'))
-            .join('');
-        return hashHex;
-    });
-}
-
-async function bigintToBuffer(value: bigint): Promise<ArrayBuffer> {
-    const hex = value.toString(16).padStart(64, '0'); // Ensure 32 bytes (64 hex chars)
-    return Uint8Array.from(Buffer.from(hex, 'hex')).buffer;
-}
-
-function bufferToBigInt(buffer: ArrayBuffer): bigint {
-    return BigInt('0x' + Buffer.from(buffer).toString('hex'));
-}
-
-// attempt at porting the functionaliy of hkdf from the tree code but it does not work as expected
-async function hkdf(
-    ikm: bigint,
-    salt: bigint | null,
-    info: bigint | null
-): Promise<bigint> {
-    if (salt === null && info === null) {
-        throw new Error('Salt and info cannot both be null');
-    }
-
-    const ikmBuffer = await bigintToBuffer(ikm);
-    const saltBuffer = salt ? await bigintToBuffer(salt) : new Uint8Array(32).buffer;
-    const infoBuffer = info ? await bigintToBuffer(info) : new Uint8Array(0).buffer;
-
-    const keyMaterial = await crypto.subtle.importKey(
-        'raw',
-        ikmBuffer,
-        { name: 'HKDF' },
-        false,
-        ['deriveBits']
-    );
-
-    const derivedBits = await crypto.subtle.deriveBits(
-        {
-            name: 'HKDF',
-            hash: 'SHA-256',
-            salt: saltBuffer,
-            info: infoBuffer,
-        },
-        keyMaterial,
-        256 // 32 bytes (256 bits)
-    );
-
-    return bufferToBigInt(derivedBits);
-}

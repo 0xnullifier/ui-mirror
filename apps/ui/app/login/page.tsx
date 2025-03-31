@@ -7,8 +7,9 @@ import { Label } from "@radix-ui/react-label";
 import { motion, AnimatePresence } from "motion/react";
 import axios from "axios";
 import { CUSTODIAN_USER_VERIFICATION_URL, GET_CUSTODIANS_URL, SEND_OTP_URL, VERIFY_OTP_URL } from "@/lib/endpoint";
-import { redirect } from "next/navigation";
 import useStore from "@/lib/store";
+import { useToast } from "@/lib/hooks/useToast";
+import { useRouter } from "next/navigation";
 
 const LoadingScreen = () => (
   <motion.div
@@ -46,6 +47,10 @@ export default function Login() {
   const [otpSent, setOtpSent] = useState(false);
   const [selectedCustodians, setSelectedCustodians] = useState<Custodian[]>([]);
   const { custodians, setCustodians } = useStore()
+
+  const { toast } = useToast()
+  const router = useRouter()
+
   const sendOtp = async () => {
     console.log("Sending OTP to:", email);
     if (!otpSent) {
@@ -56,7 +61,11 @@ export default function Login() {
         })
         if (response.data.success) {
           setOtpSent(true);
-          alert("OTP sent to your email");
+          toast({
+            title: "OTP Sent",
+            description: "An OTP has been sent to your email address.",
+            variant: "success"
+          });
         }
       } catch (error) {
         console.error("Error sending OTP:", error);
@@ -67,12 +76,18 @@ export default function Login() {
         const response = await axios.post(VERIFY_OTP_URL, {
           email,
           otp
+        }, {
+          withCredentials: true
         });
         console.log(response.data)
         if (response.data.success) {
           setStep(2);
         } else {
-          alert("Invalid OTP");
+          toast({
+            title: "Invalid OTP",
+            description: "The OTP you entered is invalid. Please try again.",
+            variant: "error"
+          });
         }
       } catch (error) {
         console.error("Error verifying OTP:", error);
@@ -103,7 +118,7 @@ export default function Login() {
     //   }
     // })
     // setLoading(false)
-    redirect(`/user/dashboard?user=${email.split("@")[0]}`)
+    router.push(`/user/dashboard?user=${email.split("@")[0]}`)
   };
 
   // load the custodians from the backend

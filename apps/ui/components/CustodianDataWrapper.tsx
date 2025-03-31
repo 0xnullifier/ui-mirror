@@ -1,12 +1,14 @@
 "use client";
 import { CUSTODIAN_ASSETS, CUSTODIAN_GET_CONTRACTS, GET_CUSTODIANS_URL, GET_USER } from "@/lib/endpoint";
+import { toast } from "@/lib/hooks/useToast";
 import useStore, { Custodian } from "@/lib/store";
-import axios from "axios";
+import axios, { AxiosError } from "axios";
+import { redirect, useRouter } from "next/navigation";
 import { useEffect } from "react";
 
 export const CustodianDataWrapper = ({ children }: { children: React.ReactNode }) => {
-    const { setCustodians, } = useStore();
-
+    const { setCustodians, setUser } = useStore();
+    const router = useRouter();
     useEffect(() => {
         const fetchCustodians = async () => {
             try {
@@ -35,12 +37,35 @@ export const CustodianDataWrapper = ({ children }: { children: React.ReactNode }
             }
         };
         const fetchUser = async () => {
-            console.log(document.cookie)
-            // const user = await axios.get(GET_USER,
-            //     {
-            //         withCredentials: true
-            //     })
-            // console.log(user)
+            try {
+                const res = await axios.get(GET_USER,
+                    {
+                        withCredentials: true
+                    })
+                if (res.status === 200) {
+                    setUser({
+                        id: res.data.user.id,
+                        email: res.data.user.email,
+                    })
+                } else {
+                    toast({
+                        title: "Error",
+                        description: "You are not logged in. Please login to continue.",
+                        variant: "error"
+                    })
+                    router.push("/login")
+                }
+            } catch (error: any) {
+                if (error.response.status === 401) {
+                    toast({
+                        title: "Error",
+                        description: "You are not logged in. Please login to continue.",
+                        variant: "error"
+                    })
+                    router.push("/login")
+                }
+                console.error("Failed to fetch user:", error);
+            }
         }
         fetchCustodians();
         fetchUser();
