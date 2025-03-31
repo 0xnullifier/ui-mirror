@@ -112,13 +112,12 @@ export default async function (fastify: FastifyInstance) {
 
             reply
                 .setCookie('token', token, {
-                    domain: 'localhost:16001',
+                    domain: 'localhost',
                     path: '/',
                     secure: true, // send cookie over HTTPS only
                     httpOnly: true,
                     sameSite: true // alternative CSRF protection
                 })
-
                 .send({
                     success: true,
                     message: 'OTP verified successfully',

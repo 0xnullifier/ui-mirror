@@ -55,11 +55,15 @@ export class OtpService {
         });
 
         if (!user || user.OTP.length === 0) {
+            console.log(`No OTP found for ${email}`);
             return false;
         }
 
         const otpRecord = user.OTP[0];
+        console.log(otpRecord.otp)
         const isValid = otpRecord.otp === inputOtp;
+
+        console.log(`OTP verification for ${email}: ${isValid}`);
 
         // Check if OTP is expired (10 minutes)
         const expiryTime = new Date(otpRecord.createdAt);
