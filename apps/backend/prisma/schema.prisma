@@ -20,25 +20,38 @@ enum Status {
 }
 
 model Custodian {
-  id                      Int              @id @default(autoincrement())
+  id                      Int        @id @default(autoincrement())
   name                    String
   logo                    String
   backendurl              String
   apiKey                  String
-  liabilitiesZkAppAddress String           @default("")
-  assetsZkAppAddress      String           @default("")
-  posZkAppAddress         String           @default("")
-  ProofAnalytics          ProofAnalytics[]
+  liabilitiesZkAppAddress String     @default("")
+  assetsZkAppAddress      String     @default("")
+  posZkAppAddress         String     @default("")
+  ProofAnalytics          Anaytics[]
+  Round                   Round[]
 }
 
-model ProofAnalytics {
-  id                         Int       @id @default(autoincrement())
-  custodianId                Int
-  custodian                  Custodian @relation(fields: [custodianId], references: [id])
-  proofsVerified             Int
-  lastProofVerifiedTimestamp DateTime
-  proofDownload              String
-  status                     Status
+model Anaytics {
+  id                Int       @id @default(autoincrement())
+  Custodian         Custodian @relation(fields: [custodianId], references: [id])
+  custodianId       Int
+  numProofsVerified Int       @default(0)
+  numProofsFailed   Int       @default(0)
+}
+
+// Represents a round of the protocol
+model Round {
+  id                      Int       @id @default(autoincrement())
+  custodianId             Int
+  custodian               Custodian @relation(fields: [custodianId], references: [id])
+  assetTxUrl              String    @default("")
+  liabilityTxUrl          String    @default("") // the one which setted the liabilities root commitment
+  solvencyTxUrl           String    @default("")
+  startingTimeStamp       DateTime  @default(now())
+  liabilitiesEndTimeStamp DateTime  @default(now())
+  assetEndTimeStamp       DateTime  @default(now())
+  solvencyEndTimeStamp    DateTime  @default(now())
 }
 
 model User {

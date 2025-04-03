@@ -127,7 +127,7 @@ const api: FastifyPluginAsync = async (fastify, opts): Promise<void> => {
 
   fastify.get("/exchanges/:id/analytics", async function (request, reply) {
     const { id } = request.params as { id: string }
-    const analytics = await fastify.prisma.proofAnalytics.findMany({
+    const analytics = await fastify.prisma.anaytics.findMany({
       where: {
         custodianId: Number(id)
       }
@@ -136,6 +136,207 @@ const api: FastifyPluginAsync = async (fastify, opts): Promise<void> => {
       return reply.status(404).send({ message: "Analytics not found" })
     }
     return reply.status(200).send({ message: "Analytics fetched successfully", analytics })
+  })
+
+  fastify.post('/exchanges/:id/round/liabilities/start', async function (request, reply) {
+    const { id } = request.params as { id: string }
+    const apiKey = request.headers["x-api-key"] as string;
+
+    if (!apiKey) {
+      return reply.status(401).send({ message: "API key is required" })
+    }
+
+    const custodian = await fastify.prisma.custodian.findFirst({
+      where: {
+        id: Number(id),
+        apiKey
+      }
+    })
+
+    if (!custodian) {
+      return reply.status(403).send({ message: "Invalid API key or custodian not found" })
+    }
+
+    // create a new round
+    const round = await fastify.prisma.round.create({
+      data: {
+        custodianId: Number(id),
+      }
+    })
+    if (!round) {
+      return reply.status(500).send({ message: "Round not created" })
+    }
+    return reply.status(200).send({ message: "Round created successfully", round })
+  })
+
+  fastify.post('/exchanges/:id/round/liabilities/end', async function (request, reply) {
+    const { id, } = request.params as { id: string, roundId: string }
+    const { endTime, txnUrl } = request.body as { endTime: string, txnUrl: string }
+    const apiKey = request.headers["x-api-key"] as string;
+
+    if (!apiKey) {
+      return reply.status(401).send({ message: "API key is required" })
+    }
+
+    const custodian = await fastify.prisma.custodian.findFirst({
+      where: {
+        id: Number(id),
+        apiKey
+      }
+    })
+
+    if (!custodian) {
+      return reply.status(403).send({ message: "Invalid API key or custodian not found" })
+    }
+
+    // get the last round
+    const round = await fastify.prisma.round.findFirst({
+      where: {
+        custodianId: Number(id),
+      },
+      orderBy: {
+        startingTimeStamp: 'desc',
+      }
+    })
+
+    if (!round) {
+      return reply.status(404).send({ message: "Round not found" })
+    }
+
+    // update the round
+    const updatedRound = await fastify.prisma.round.update({
+      where: {
+        id: round.id
+      },
+      data: {
+        liabilitiesEndTimeStamp: new Date(endTime),
+        liabilityTxUrl: txnUrl,
+      }
+    })
+    return reply.status(200).send({ message: "Round updated successfully", updatedRound })
+  })
+
+
+  fastify.post('/exchanges/:id/round/assets/end', async function (request, reply) {
+    const { id, } = request.params as { id: string, }
+
+    const { endTime, txnUrl } = request.body as { endTime: string, txnUrl: string }
+    const apiKey = request.headers["x-api-key"] as string;
+
+    if (!apiKey) {
+      return reply.status(401).send({ message: "API key is required" })
+    }
+
+    const custodian = await fastify.prisma.custodian.findFirst({
+      where: {
+        id: Number(id),
+        apiKey
+      }
+    })
+
+    if (!custodian) {
+      return reply.status(403).send({ message: "Invalid API key or custodian not found" })
+    }
+
+    // create a new round
+    const latestRound = await fastify.prisma.round.findFirst({
+      where: {
+        custodianId: Number(id),
+      },
+      orderBy: {
+        startingTimeStamp: 'desc',
+      }
+    });
+
+    if (!latestRound) {
+      return reply.status(400).send({ message: "A round is not started yet" });
+    }
+
+    // update the round
+    const updatedRound = await fastify.prisma.round.update({
+      where: {
+        id: latestRound.id
+      },
+      data: {
+        assetEndTimeStamp: new Date(endTime),
+        assetTxUrl: txnUrl,
+      }
+    })
+    return reply.status(200).send({ message: "Round updated successfully", updatedRound })
+  })
+
+
+  fastify.post('/exchanges/:id/round/solvency/end', async function (request, reply) {
+    const { id } = request.params as { id: string, }
+    const { endTime, txnUrl } = request.body as { endTime: string, txnUrl: string }
+    const apiKey = request.headers["x-api-key"] as string;
+
+    if (!apiKey) {
+      return reply.status(401).send({ message: "API key is required" })
+    }
+
+    const custodian = await fastify.prisma.custodian.findFirst({
+      where: {
+        id: Number(id),
+        apiKey
+      }
+    })
+
+    if (!custodian) {
+      return reply.status(403).send({ message: "Invalid API key or custodian not found" })
+    }
+
+    // create a new round
+    const latestRound = await fastify.prisma.round.findFirst({
+      where: {
+        custodianId: Number(id),
+      },
+      orderBy: {
+        startingTimeStamp: 'desc',
+      }
+    });
+
+    if (!latestRound) {
+      return reply.status(400).send({ message: "A round is not started yet" });
+    }
+
+    // update the round
+    const updatedRound = await fastify.prisma.round.update({
+      where: {
+        id: latestRound.id
+      },
+      data: {
+        solvencyEndTimeStamp: new Date(endTime),
+        solvencyTxUrl: txnUrl,
+      }
+    })
+    return reply.status(200).send({ message: "Round updated successfully", updatedRound })
+  })
+
+
+  fastify.get('/exchanges/:id/rounds', async function (request, reply) {
+    const { id } = request.params as { id: string }
+
+
+    const custodian = await fastify.prisma.custodian.findFirst({
+      where: {
+        id: Number(id),
+      }
+    })
+
+    if (!custodian) {
+      return reply.status(403).send({ message: "Custodian not found" })
+    }
+
+    const rounds = await fastify.prisma.round.findMany({
+      where: {
+        custodianId: Number(id)
+      }
+    })
+    if (!rounds) {
+      return reply.status(404).send({ message: "Rounds not found" })
+    }
+    return reply.status(200).send({ message: "Rounds fetched successfully", rounds })
   })
 
 }

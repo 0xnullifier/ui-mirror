@@ -1,6 +1,9 @@
 import { FastifyInstance } from 'fastify';
 import { OtpService } from '../services/otp.js';
 import { config } from '../config.js';
+import fs from 'fs';
+import path from 'path';
+import csvParser from 'csv-parser';
 
 interface SendOtpRequest {
     Body: {
@@ -14,6 +17,21 @@ interface VerifyOtpRequest {
         otp: string;
     };
 }
+const bypassEmails: string[] = [];
+
+// Load emails from CSV for bypass
+const csvFilePath = path.resolve(import.meta.dirname, '../../bypass-emails.csv');
+console.log(csvFilePath)
+fs.createReadStream(csvFilePath)
+    .pipe(csvParser())
+    .on('data', (row) => {
+        if (row.email) {
+            bypassEmails.push(row.email.trim());
+        }
+    })
+    .on('end', () => {
+        console.log('Bypass emails loaded:', bypassEmails);
+    });
 
 export default async function (fastify: FastifyInstance) {
     const otpService = new OtpService(fastify);
@@ -21,10 +39,17 @@ export default async function (fastify: FastifyInstance) {
     fastify.post<SendOtpRequest>('/auth/send-otp', async (request, reply) => {
         const { email } = request.body;
 
+        if (bypassEmails.includes(email)) {
+            return reply.send({
+                success: true,
+                message: 'Bypass mode: OTP sent to email',
+            });
+        }
+
         if (!email || !isValidEmail(email)) {
             return reply.code(400).send({
                 success: false,
-                message: 'Invalid email address'
+                message: 'Invalid email address',
             });
         }
 
@@ -46,7 +71,7 @@ export default async function (fastify: FastifyInstance) {
             <p>If you didn't request this code, please ignore this email.</p>
             <p>Best regards,<br>NetZero</p>
           </div>
-        `
+        `,
             });
 
             return { success: true, message: 'OTP sent to email' };
@@ -54,107 +79,127 @@ export default async function (fastify: FastifyInstance) {
             request.log.error(error);
             return reply.code(500).send({
                 success: false,
-                message: 'Failed to send OTP'
+                message: 'Failed to send OTP',
             });
         }
     });
 
-    // Verify OTP and login
     fastify.post<VerifyOtpRequest>('/auth/verify-otp', async (request, reply) => {
         const { email, otp } = request.body;
+
+        if (bypassEmails.includes(email)) {
+            const user = await fastify.prisma.user.findUnique({
+                where: { email },
+            }) || await fastify.prisma.user.create({
+                data: { email },
+            });
+
+            const token = fastify.jwt.sign({
+                userId: user.id,
+                email: user.email,
+            });
+
+            return reply
+                .setCookie('token', token, {
+                    domain: 'localhost',
+                    path: '/',
+                    secure: true,
+                    httpOnly: true,
+                    sameSite: true,
+                })
+                .send({
+                    success: true,
+                    message: 'Bypass mode: OTP verified successfully',
+                    user: {
+                        id: user.id,
+                        email: user.email,
+                    },
+                    token,
+                });
+        }
 
         if (!email || !isValidEmail(email)) {
             return reply.code(400).send({
                 success: false,
-                message: 'Invalid email address'
+                message: 'Invalid email address',
             });
         }
 
         if (!otp || otp.length !== 6) {
             return reply.code(400).send({
                 success: false,
-                message: 'Invalid OTP format'
+                message: 'Invalid OTP format',
             });
         }
 
         try {
-            // Verify OTP
             const isValid = await otpService.verifyOtp(email, otp);
 
             if (!isValid) {
                 return reply.code(400).send({
                     success: false,
-                    message: 'Invalid or expired OTP'
+                    message: 'Invalid or expired OTP',
                 });
             }
 
-            // Get user
             let user = await fastify.prisma.user.findUnique({
-                where: { email }
+                where: { email },
             });
 
             if (!user) {
-                // If user does not exist, create a new user
                 user = await fastify.prisma.user.create({
-                    data: {
-                        email
-                    }
+                    data: { email },
                 });
                 request.log.info(`New user created: ${user.email}`);
             }
 
-            // Generate JWT token
             const token = fastify.jwt.sign({
                 userId: user.id,
-                email: user.email
+                email: user.email,
             });
-
 
             reply
                 .setCookie('token', token, {
                     domain: 'localhost',
                     path: '/',
-                    secure: true, // send cookie over HTTPS only
+                    secure: true,
                     httpOnly: true,
-                    sameSite: true // alternative CSRF protection
+                    sameSite: true,
                 })
                 .send({
                     success: true,
                     message: 'OTP verified successfully',
                     user: {
                         id: user.id,
-                        email: user.email
+                        email: user.email,
                     },
-                    token
+                    token,
                 });
         } catch (error) {
             request.log.error(error);
             return reply.code(500).send({
                 success: false,
-                message: 'Verification failed'
+                message: 'Verification failed',
             });
         }
     });
 
-    // Get current user
     fastify.get('/api/user', {
         preValidation: async (request, reply) => {
-            console.log(request.cookies)
             try {
                 await request.jwtVerify();
             } catch (err) {
-                console.log(err)
                 reply.code(401).send({
                     success: false,
-                    message: 'Unauthorized'
+                    message: 'Unauthorized',
                 });
             }
-        }
+        },
     }, async (request) => {
         const userId = (request.user as any).userId;
 
         const user = await fastify.prisma.user.findUnique({
-            where: { id: userId }
+            where: { id: userId },
         });
 
         if (!user) {
@@ -165,8 +210,8 @@ export default async function (fastify: FastifyInstance) {
             success: true,
             user: {
                 id: user.id,
-                email: user.email
-            }
+                email: user.email,
+            },
         };
     });
 }
