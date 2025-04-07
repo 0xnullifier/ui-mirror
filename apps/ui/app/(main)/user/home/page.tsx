@@ -3,7 +3,7 @@
 import { Table, TableBody, TableCell, TableHead, TableHeaderCell, TableRoot, TableRow } from "@/components/table"
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { ArrowUp, ArrowDown, AlertCircle, Calendar } from 'lucide-react';
+import { ArrowUp, ArrowDown, AlertCircle, Calendar, Download } from 'lucide-react';
 import { CompanyRowItem } from "@/components/CompanyRowItem";
 import { Chart } from "@/components/Chart";
 import { Status, StatusText } from "@/components/StatusText";
@@ -33,6 +33,8 @@ export default function UserHome() {
         },
     ];
 
+
+
     return (
         <div className="w-full flex flex-col justify-center mr-20">
             <div className="flex flex-col bg-white p-[2rem] rounded-3xl mt-20">
@@ -41,7 +43,10 @@ export default function UserHome() {
             </div>
             <div className="flex mt-10">
                 <Chart chartData={[]} />
-                <OnChainTransactions transactions={dummyTransactions} rangeDate="1 - 30 March 2025" />
+                <OnChainTransactions
+                    transactions={dummyTransactions}
+                    rangeDate={`${new Date().toLocaleString('default', { month: 'long' })} ${new Date().getFullYear()}`}
+                />
             </div>
         </div>
     )
@@ -80,7 +85,7 @@ const ExchangeSummaryTable = ({ data }: { data: TableData[] }) => {
                             <TableCell className="text-center text-[1rem]"><StatusText status={item.status} /></TableCell>
                             <TableCell className="text-center text-[1rem]">{item.lastVerificationTx}</TableCell>
                             <TableCell className="flex justify-center">
-                                <a href={item.lastProofGeneratedLink} target="_blank" rel="noopener noreferrer" className="text-[#8E64CD] font-bold">View</a>
+                                <a href={item.lastProofGeneratedLink} target="_blank" rel="noopener noreferrer" className="text-[#8E64CD] font-bold"><Download /></a>
                             </TableCell>
                         </TableRow>
                     ))}

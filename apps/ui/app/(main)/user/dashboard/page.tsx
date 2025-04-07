@@ -65,7 +65,10 @@ export default function Page(
     const [selectedExchanges, setSelectedExchanges] = useState<Custodian[]>([]);
     const [csvData, setCsvData] = useState<string>("");
     const [csvDialogOpen, setCsvDialogOpen] = useState(false);
-    const { user } = useStore()
+    const user = {
+        email: "david.jones20@gmail.com"
+    }
+    console.log(user)
     const { toast } = useToast()
 
     const addEntry = () => {
@@ -513,12 +516,109 @@ export default function Page(
                             <TimelineDemo />
                         </div>
                     </div>
+                    <DisputeButton />
                 </>
             ) : <div> Could not find you please login again </div>}
         </div>
     )
 }
 
+const DisputeButton = () => {
+    const [isDialogOpen, setIsDialogOpen] = useState(false);
+    const [txUrl, setTxUrl] = useState('');
+    const [description, setDescription] = useState('');
+    const [assetValues, setAssetValues] = useState('');
+    const { toast } = useToast();
+
+    const handleSubmit = () => {
+        if (!txUrl || !description || !assetValues) {
+            toast({
+                title: "Missing information",
+                description: "Please fill in all fields",
+                variant: "error"
+            });
+            return;
+        }
+
+        // Submit the dispute (in a real implementation, this would call an API)
+        toast({
+            title: "Dispute submitted",
+            description: "Your dispute has been submitted successfully",
+            variant: "success"
+        });
+        setIsDialogOpen(false);
+
+        // Reset form
+        setTxUrl('');
+        setDescription('');
+        setAssetValues('');
+    };
+
+    return (
+        <>
+            <Button
+                className="fixed right-6 bottom-20 z-50 rounded-full shadow-xl"
+                variant="destructive"
+                onClick={() => setIsDialogOpen(true)}
+            >
+                Dispute
+            </Button>
+
+            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+                <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                        <DialogTitle>Submit a Dispute</DialogTitle>
+                        <DialogDescription>
+                            Please provide details about your dispute
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="grid gap-4 py-4">
+                        <div className="grid gap-2">
+                            <label htmlFor="txUrl" className="text-sm font-medium">Transaction URL</label>
+                            <Input
+                                id="txUrl"
+                                value={txUrl}
+                                onChange={(e) => setTxUrl(e.target.value)}
+                                placeholder="https://minascan.io/devnet/tx/..."
+                            />
+                        </div>
+
+                        <div className="grid gap-2">
+                            <label htmlFor="assetValues" className="text-sm font-medium">Asset Values</label>
+                            <Input
+                                id="assetValues"
+                                value={assetValues}
+                                onChange={(e) => setAssetValues(e.target.value)}
+                                placeholder="BTC: 0.5, ETH: 10, etc."
+                            />
+                        </div>
+
+                        <div className="grid gap-2">
+                            <label htmlFor="description" className="text-sm font-medium">Description</label>
+                            <textarea
+                                id="description"
+                                className="min-h-[120px] rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none"
+                                value={description}
+                                onChange={(e) => setDescription(e.target.value)}
+                                placeholder="Describe the reason for your dispute..."
+                            />
+                        </div>
+                    </div>
+
+                    <DialogFooter>
+                        <Button variant="secondary" onClick={() => setIsDialogOpen(false)}>
+                            Cancel
+                        </Button>
+                        <Button onClick={handleSubmit}>
+                            Submit Dispute
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+        </>
+    );
+};
 
 
 
@@ -552,59 +652,29 @@ const TokenTable = ({ data }: { data: TableData[] }) => {
 
 
 const TimelineDemo = () => {
-    const [timelineData, setTimelineData] = useState([
-        {
-            id: '6',
-            title: 'Mexc Verification',
-            date: '18 DEC 4:41 PM',
-            icon: <Image src="/assets/mexc.svg" alt="Mexc" width={20} height={20} />,
-        },
-        {
-            id: '5',
-            title: 'Gate.io Verification',
-            date: '19 DEC 11:35 PM',
-            icon: <Image src="/assets/gate-io.svg" alt="Gate.io" width={20} height={20} />,
-        },
-        {
-            id: '4',
-            title: 'Binance Verification',
-            date: '20 DEC 3:52 PM',
-            icon: <Image src="/assets/binance.svg" alt="Binance" width={20} height={20} />,
-        }
-    ]);
+    const { custodians } = useStore()
+    const [timelineData, setTimelineData] = useState<{
+        id: string;
+        title: string;
+        date: string;
+        icon: React.JSX.Element;
+        backendUrl: string;
+        txUrl?: string;
+    }[]>([]);
+    useEffect(() => {
+        // Transform custodians data into the format required by VerticalTimeline
+        const transformedData = custodians.map((custodian) => ({
+            id: custodian.name, // Unique identifier
+            title: `${custodian.name}`,
+            date: new Date().toLocaleDateString(), // TODO: see what to do here
+            icon: <img src={custodian.logo} alt={`${custodian.name} logo`} className="w-8 h-8" />,
+            backendUrl: custodian.backendurl,
+            txUrl: custodian.txs?.[0]?.hash ? `https://minascan.io/devnet/tx/${custodian.txs[0].hash}` : undefined,
+        }));
 
-    // Function to add a new item to the timeline
-    const addNewItem = () => {
-        const newItems = [
-            {
-                id: '3',
-                title: 'Gate.io Verification',
-                date: '21 DEC 9:28 PM',
-                icon: <Image src="/assets/gate-io.svg" alt="Gate.io" width={20} height={20} />,
-            },
-            {
-                id: '2',
-                title: 'Dummy Cex Verification',
-                date: '21 DEC 11:21 PM',
-                icon: <Image src="/assets/mexc.svg" alt="Dummy Cex" width={20} height={20} />,
-            },
-            {
-                id: '1',
-                title: 'Binance Verification',
-                date: '22 DEC 7:20 PM',
-                icon: <Image src="/assets/binance.svg" alt="Binance" width={20} height={20} />,
-            }
-        ];
-
-        // Add one item at a time with delay
-        let timer = 0;
-        newItems.forEach(item => {
-            setTimeout(() => {
-                setTimelineData(prev => [item, ...prev]);
-            }, timer);
-            timer += 1000;
-        });
-    };
+        setTimelineData(transformedData);
+    }, [custodians]);
+    console.log(custodians)
 
     return (
         <div className="w-full max-w-md mx-auto">
@@ -613,35 +683,4 @@ const TimelineDemo = () => {
     );
 };
 
-// const [statsData, setStateData] = useState([
-//     {
-//         title: "Total Collateral",
-//         value: "$1,000,000",
-//         percetageChange: 5,
-//         icon: <Image src="/assets/wallet-icon.svg" alt="Mexc" width={50} height={50} />,
-//     },
-//     {
-//         title: "Total Equity",
-//         value: "$1,000,000",
-//         percetageChange: -5,
-//         icon: <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#FF8A62" className="w-[45px] h-[45px]">
-//             <path d="M10.464 8.746c.227-.18.497-.311.786-.394v2.795a2.252 2.252 0 0 1-.786-.393c-.394-.313-.546-.681-.546-1.004 0-.323.152-.691.546-1.004ZM12.75 15.662v-2.824c.347.085.664.228.921.421.427.32.579.686.579.991 0 .305-.152.671-.579.991a2.534 2.534 0 0 1-.921.42Z" />
-//             <path fillRule="evenodd" d="M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25ZM12.75 6a.75.75 0 0 0-1.5 0v.816a3.836 3.836 0 0 0-1.72.756c-.712.566-1.112 1.35-1.112 2.178 0 .829.4 1.612 1.113 2.178.502.4 1.102.647 1.719.756v2.978a2.536 2.536 0 0 1-.921-.421l-.879-.66a.75.75 0 0 0-.9 1.2l.879.66c.533.4 1.169.645 1.821.75V18a.75.75 0 0 0 1.5 0v-.81a4.124 4.124 0 0 0 1.821-.749c.745-.559 1.179-1.344 1.179-2.191 0-.847-.434-1.632-1.179-2.191a4.122 4.122 0 0 0-1.821-.75V8.354c.29.082.559.213.786.393l.415.33a.75.75 0 0 0 .933-1.175l-.415-.33a3.836 3.836 0 0 0-1.719-.755V6Z" clipRule="evenodd" />
-//         </svg>
-
-//     },
-//     {
-//         title: "Total Debt",
-//         value: "$1,000,000",
-//         percetageChange: +5,
-//         icon: <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#FF8A62" className="w-[45px] h-[45px]">
-//             <path d="M12 7.5a2.25 2.25 0 1 0 0 4.5 2.25 2.25 0 0 0 0-4.5Z" />
-//             <path fillRule="evenodd" d="M1.5 4.875C1.5 3.839 2.34 3 3.375 3h17.25c1.035 0 1.875.84 1.875 1.875v9.75c0 1.036-.84 1.875-1.875 1.875H3.375A1.875 1.875 0 0 1 1.5 14.625v-9.75ZM8.25 9.75a3.75 3.75 0 1 1 7.5 0 3.75 3.75 0 0 1-7.5 0ZM18.75 9a.75.75 0 0 0-.75.75v.008c0 .414.336.75.75.75h.008a.75.75 0 0 0 .75-.75V9.75a.75.75 0 0 0-.75-.75h-.008ZM4.5 9.75A.75.75 0 0 1 5.25 9h.008a.75.75 0 0 1 .75.75v.008a.75.75 0 0 1-.75.75H5.25a.75.75 0 0 1-.75-.75V9.75Z" clipRule="evenodd" />
-//             <path d="M2.25 18a.75.75 0 0 0 0 1.5c5.4 0 10.63.722 15.6 2.075 1.19.324 2.4-.558 2.4-1.82V18.75a.75.75 0 0 0-.75-.75H2.25Z" />
-//         </svg>
-
-
-
-//     },
-// ]);
 

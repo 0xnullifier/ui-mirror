@@ -58,6 +58,8 @@ export default function Login() {
         console.log(SEND_OTP_URL)
         const response = await axios.post(SEND_OTP_URL, {
           email
+        }, {
+          withCredentials: true
         })
         if (response.data.success) {
           setOtpSent(true);

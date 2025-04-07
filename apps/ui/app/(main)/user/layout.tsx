@@ -7,7 +7,7 @@ export default function UserScreensLayout(
     console.log("here")
     return (
         <div className="flex h-screen justify-between flex-col">
-            <div className="flex justify-center items-center">
+            <div className="flex">
                 <div className="w-[350px]">
                     <Sidebar />
                 </div>

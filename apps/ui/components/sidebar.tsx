@@ -1,10 +1,24 @@
-import React from 'react';
+"use client";
+import React, { useEffect, useState } from 'react';
 import { UserIcon, HomeIcon, QuestionMarkCircleIcon } from "@heroicons/react/24/solid";
 import { Card } from './card';
 import { Button } from './button';
 import Image from 'next/image';
 import Link from 'next/link';
 const Sidebar = () => {
+    // taking profile as default active
+    const [active, setActive] = useState<"profile" | "home">("profile");
+    useEffect(() => {
+        const path = window.location.pathname;
+        if (path.includes("home")) {
+            setActive("home");
+        } else if (path.includes("dashboard")) {
+            setActive("profile");
+        }
+    }, [])
+    const toggleActive = (value: "profile" | "home") => {
+        setActive(value);
+    }
     return (
         <div className='p-10'>
             <div>
@@ -24,8 +38,8 @@ const Sidebar = () => {
                     style={{ height: '1px' }}
                 ></div>
                 <div className='flex flex-col gap-4 mt-6'>
-                    <SideBarItem icon={<Image src="/assets/Active-Profile.svg" alt="Profile active icon" width={42} height={43} />} text={"Profile"} active={true} />
-                    <SideBarItem icon={<Image alt="home svg" src="/assets/home-unactive.svg" width={42} height={42} />} text={"Home"} active={false} />
+                    <Link href={"/user/dashboard"} onClick={() => setActive("profile")}><SideBarItem icon={<Image src="/assets/Active-Profile.svg" alt="Profile active icon" width={42} height={43} />} text={"Profile"} active={active === "profile"} /></Link>
+                    <Link href={"/user/home"} onClick={() => setActive("home")}><SideBarItem icon={<Image alt="home svg" src="/assets/home-unactive.svg" width={42} height={42} />} text={"Home"} active={active === "home"} /></Link>
                 </div>
                 <div className='h-[200px]'></div>
                 <HelpBanner />
@@ -69,7 +83,7 @@ const HelpBanner = () => {
             </div>
 
             {/* Documentation button */}
-            <Button className='w-full rounded-2xl font-bold' variant='secondary'>Documentation</Button>
+            <a href='https://dagoat.gitbook.io/netzero-docs/' target='_blank'>  <Button className='w-full rounded-2xl font-bold' variant='secondary'>Documentation</Button></a>
         </div>
     )
 }

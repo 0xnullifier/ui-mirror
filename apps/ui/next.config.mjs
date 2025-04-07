@@ -42,6 +42,10 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
+  env: {
+    'API_URL': 'https://api.netxero.click',
+    "SECRET_MESSAGE": "Hello, this is a secret message"
+  },
   output: 'export',
   /* Used to serve the Next.js app from a subdirectory (the GitHub repo name) and
    * assetPrefix is used to serve assets (JS, CSS, images, etc.) from that subdirectory

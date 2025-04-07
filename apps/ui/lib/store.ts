@@ -9,7 +9,9 @@ export interface Custodian {
     liabilitiesZkAppAddress: string;
     assetsZkAppAddress: string;
     posZkAppAddress: string;
+    txs?: any;
 }
+
 
 export interface User {
     id: string;
