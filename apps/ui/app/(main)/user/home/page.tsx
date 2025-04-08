@@ -1,12 +1,12 @@
 "use client"
 
 import { Table, TableBody, TableCell, TableHead, TableHeaderCell, TableRoot, TableRow } from "@/components/table"
-import { MinaGradientText } from "@/components/token-name"
-import { CompanyRowItem } from "../dashboard/page";
-import { AreaChart } from "@/components/areaChart";
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ArrowUp, ArrowDown, AlertCircle, Calendar } from 'lucide-react';
+import { CompanyRowItem } from "@/components/CompanyRowItem";
+import { Chart } from "@/components/Chart";
+import { Status, StatusText } from "@/components/StatusText";
 
 export default function UserHome() {
     const dummyData: TableData[] = [
@@ -40,14 +40,13 @@ export default function UserHome() {
                 <ExchangeSummaryTable data={dummyData} />
             </div>
             <div className="flex mt-10">
-                <Chart />
+                <Chart chartData={[]} />
                 <OnChainTransactions transactions={dummyTransactions} rangeDate="1 - 30 March 2025" />
             </div>
         </div>
     )
 }
 
-export type Status = "Generating Proof" | "Verifying onChain" | "Proof Verified" | "Failed"
 
 
 interface TableData {
@@ -91,93 +90,6 @@ const ExchangeSummaryTable = ({ data }: { data: TableData[] }) => {
     )
 }
 
-
-export const StatusText = ({ status }: { status: Status }) => {
-    return (
-        <>
-            {
-                status === "Generating Proof" ? (
-                    <p className="text-[#D36A46] font-bold">{status}</p>
-                ) : status === "Verifying onChain" ? (
-                    <p className="font-bold">Verifying <MinaGradientText text="OnChain" /></p>
-                ) : status === "Proof Verified" ? (
-                    <p className="text-[#68D391] font-bold">{status}</p>
-                ) : (
-                    <p className="text-[#FF070B] font-bold">{status}</p>
-                )
-            }
-        </>
-    )
-}
-
-const chartdata = [
-    {
-        date: "Jan 2025 Week 1",
-        ProofsGenerated: 2500,
-        LiabilitiesVerified: 10000,
-    },
-    {
-        date: "Jan 2025 Week 2",
-        ProofsGenerated: 3000,
-        LiabilitiesVerified: 12000,
-    },
-    {
-        date: "Jan 2025 Week 3",
-        ProofsGenerated: 2000,
-        LiabilitiesVerified: 9000,
-    },
-    {
-        date: "Jan 2025 Week 4",
-        ProofsGenerated: 3500,
-        LiabilitiesVerified: 11000,
-    },
-    {
-        date: "Feb 2025 Week 1",
-        ProofsGenerated: 6890,
-        LiabilitiesVerified: 52575,
-    },
-    {
-        date: "Feb 2025 Week 2",
-        ProofsGenerated: 7000,
-        LiabilitiesVerified: 53000,
-    },
-    {
-        date: "Feb 2025 Week 3",
-        ProofsGenerated: 6800,
-        LiabilitiesVerified: 52000,
-    },
-    {
-        date: "Feb 2025 Week 4",
-        ProofsGenerated: 7100,
-        LiabilitiesVerified: 54000,
-    },
-    {
-        date: "Mar 2025 Week 1",
-        ProofsGenerated: 2500,
-        LiabilitiesVerified: 25000,
-    },
-
-]
-
-export const Chart = () => {
-    return (
-        <div className="flex flex-col gap-16 bg-white px-10 py-20 rounded-3xl w-[50%] h-full center">
-            <p className="text-2xl font-bold">Proofs Generated</p>
-            <AreaChart
-                type={"default"}
-                className="font-bold h-full"
-                data={chartdata}
-                index="date"
-                categories={["ProofsGenerated", "LiabilitiesVerified"]}
-                colors={["orangeMina", "purpleMina"]}
-                showLegend={false}
-                fill="gradient"
-                yAxisLabel="Number of Proofs"
-                yAxisWidth={50}
-            />
-        </div>
-    )
-}
 
 interface TransactionProps {
     id: string;

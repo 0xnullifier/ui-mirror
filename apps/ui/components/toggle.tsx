@@ -5,7 +5,7 @@ import React from "react"
 import * as TogglePrimitive from "@radix-ui/react-toggle"
 import * as ToggleGroupPrimitive from "@radix-ui/react-toggle-group"
 
-import { focusRing } from "@/lib/utils"
+import { cx, focusRing } from "@/lib/utils"
 
 const toggleStyles = [
     // base
@@ -28,13 +28,13 @@ const Toggle = React.forwardRef<
     React.ComponentPropsWithoutRef<typeof TogglePrimitive.Root>
 >(({ className, ...props }, ref) => (
     <TogglePrimitive.Root
-    ref= { ref }
-    className = { cx(toggleStyles, className) }
-    { ...props }
+        ref={ref}
+        className={cx(toggleStyles, className)}
+        {...props}
     />
 ))
 
-    Toggle.displayName = TogglePrimitive.Root.displayName
+Toggle.displayName = TogglePrimitive.Root.displayName
 
 export { Toggle }
 
@@ -43,29 +43,29 @@ const ToggleGroup = React.forwardRef<
     React.ComponentPropsWithoutRef<typeof ToggleGroupPrimitive.Root>
 >(({ className, children, ...props }, ref) => (
     <ToggleGroupPrimitive.Root
-    ref= { ref }
-    className = { cx("flex items-center justify-center gap-1 flex-nowrap", className) }
-    { ...props }
+        ref={ref}
+        className={cx("flex items-center justify-center gap-1 flex-nowrap", className)}
+        {...props}
     >
-    { children }
+        {children}
     </ToggleGroupPrimitive.Root>
 ))
 
-    ToggleGroup.displayName = ToggleGroupPrimitive.Root.displayName
+ToggleGroup.displayName = ToggleGroupPrimitive.Root.displayName
 
 const ToggleGroupItem = React.forwardRef<
     React.ElementRef<typeof ToggleGroupPrimitive.Item>,
     React.ComponentPropsWithoutRef<typeof ToggleGroupPrimitive.Item>
 >(({ className, children, ...props }, ref) => (
     <ToggleGroupPrimitive.Item
-    ref= { ref }
-    className = { cx(toggleStyles, className) }
-    { ...props }
+        ref={ref}
+        className={cx(toggleStyles, className)}
+        {...props}
     >
-    { children }
+        {children}
     </ToggleGroupPrimitive.Item>
 ))
 
-    ToggleGroupItem.displayName = ToggleGroupPrimitive.Item.displayName
+ToggleGroupItem.displayName = ToggleGroupPrimitive.Item.displayName
 
 export { ToggleGroup, ToggleGroupItem }
