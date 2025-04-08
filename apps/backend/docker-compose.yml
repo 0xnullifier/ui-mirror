@@ -1,0 +1,16 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000" # Adjust port as needed for your backend
+    env_file:
+      - .env
+    networks:
+      - backend
+
+networks:
+  backend:
+
+

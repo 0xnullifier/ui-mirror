@@ -37,7 +37,7 @@ import { NetZeroLiabilitiesVerifier } from "@netzero/contracts"
 import { InclusionProofProgram, rangeCheckProgram, MerkleWitness, NodeContent, UserParams } from "@netzero/circuits"
 import { Tooltip } from "@/components/Tooltip";
 import { TableData } from "@/lib/types";
-import { handleGenerateAndVerify } from "@/lib/actions";
+import { hash } from "@/lib/actions";
 import { useToast } from "@/lib/hooks/useToast";
 
 const PRECISION = 1e5
@@ -56,8 +56,6 @@ interface publicParams {
 export default function Page(
 ) {
     const [tableData, setTableData] = useState<TableData[]>([]);
-    const searchParams = useSearchParams()
-    const userName = searchParams.get("user")
     const [entries, setEntries] = useState<AssetEntry[]>([]);
     const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
     const { custodians } = useStore()
@@ -65,7 +63,7 @@ export default function Page(
     const [selectedExchanges, setSelectedExchanges] = useState<Custodian[]>([]);
     const [csvData, setCsvData] = useState<string>("");
     const [csvDialogOpen, setCsvDialogOpen] = useState(false);
-
+    const { user } = useStore()
     const { toast } = useToast()
 
     const addEntry = () => {
@@ -145,7 +143,7 @@ export default function Page(
 
     const handleCsvData = (entry: AssetEntry) => {
         if (csvData) {
-            const rows = csvData.split("\n").map(row => row.split(/\s+|,/));
+            const rows = csvData?.split("\n").map(row => row?.split(/\s+|,/));
             console.log(rows)
             const parsedEntries = rows.map(([asset, value, debt]) => {
                 const isValidAsset = custodians.some(custodian =>
@@ -184,12 +182,144 @@ export default function Page(
             })
         }
     }
+
+    const handleGenerateAndVerify = async (exchange: Custodian, tableData: TableData[]) => {
+        if (!user) {
+            return;
+        }
+        try {
+            const userId = BigInt('0x' + await hash(user.email)).toString();
+            const result = await axios.post(CUSTODIAN_INCLUSION_PROOFS(exchange.backendurl), {
+                userId
+            });
+
+            const { account, error } = await fetchAccount({ publicKey: PublicKey.fromBase58(exchange.liabilitiesZkAppAddress) });
+            if (error) {
+                console.error("Error fetching account:", error);
+                toast({
+                    title: "Error",
+                    description: "Error fetching account: " + error.statusText,
+                    variant: "error",
+                });
+                return;
+            }
+
+            const zkApp = new NetZeroLiabilitiesVerifier(PublicKey.fromBase58(exchange.liabilitiesZkAppAddress));
+
+            console.time("range check program");
+            await rangeCheckProgram.compile();
+            console.timeEnd("range check program");
+            console.time("Inclusion proof program compile");
+            await InclusionProofProgram.compile();
+            console.timeEnd("Inclusion proof program compile");
+            console.time("contract compile");
+            await NetZeroLiabilitiesVerifier.compile();
+            console.timeEnd("contract compile");
+
+            let path: NodeContent[] = result.data.proof.path.map((p: { commitment: { x: string, y: string }, hash: string }) => {
+                return new NodeContent({ commitment: Group.fromJSON(p.commitment), hash: Field.fromJSON(p.hash) });
+            });
+            for (let i = path.length; i < 32; i++) {
+                path.push(new NodeContent({ commitment: Group.zero, hash: Field(0) }));
+            }
+            let lefts = result.data.proof.lefts.map((l: boolean) => Bool.fromValue(l));
+            for (let i = lefts.length; i < 32; i++) {
+                lefts.push(Bool.fromValue(false));
+            }
+
+            const merkleWitness = new MerkleWitness({
+                path,
+                lefts
+            });
+
+            const blindingFactor = Field(result.data.blindingFactor);
+            const userSecret = Field(result.data.userSecret);
+
+            const relevantEntries = tableData
+                ///@ts-ignore
+                .filter(entry => entry.company.props.name === exchange.name);
+            console.log(relevantEntries);
+            const balances = relevantEntries
+                .map(entry => Field(BigInt(Math.floor(Number(entry.equity)))));
+            for (let i = balances.length; i < 100; i++) {
+                balances.push(Field(0));
+            }
+
+            const userParams = new UserParams({
+                balances,
+                blindingFactor,
+                userSecret,
+                userId: Field(userId),
+            });
+
+            console.log(userParams);
+
+            console.time("generating proof new");
+            // generate proof
+            const { proof } = await InclusionProofProgram.inclusionProof(merkleWitness, userParams);
+            console.timeEnd("generating proof new");
+
+            try {
+                // Retrieve Mina provider injected by browser extension wallet
+                const mina = (window as any).mina;
+                const walletKey: string = (await mina.requestAccounts())[0];
+                console.log("Connected wallet address: " + walletKey);
+                await fetchAccount({ publicKey: PublicKey.fromBase58(walletKey) });
+
+                const transaction = await Mina.transaction(async () => {
+                    console.log("Executing zkApp.verifyInclusion() locally");
+                    await zkApp.verifyInclusion(proof);
+                });
+
+                // Prove execution of the contract using the proving key
+                await transaction.prove();
+
+                // Broadcast the transaction to the Mina network
+                console.log("Broadcasting proof of execution to the Mina network");
+                const { hash } = await mina.sendTransaction({ transaction: transaction.toJSON() });
+
+                // Display the link to the transaction
+                const transactionLink = "https://minascan.io/devnet/tx/" + hash;
+                toast({
+                    title: "Success",
+                    description: `Transaction broadcasted successfully. View it here: ${transactionLink}`,
+                    variant: "success",
+                });
+            } catch (e: any) {
+                console.error(e.message);
+                let errorMessage = "";
+
+                if (e.message.includes("Cannot read properties of undefined (reading 'requestAccounts')")) {
+                    errorMessage = "Is Auro installed?";
+                } else if (e.message.includes("Please create or restore wallet first.")) {
+                    errorMessage = "Have you created a wallet?";
+                } else if (e.message.includes("User rejected the request.")) {
+                    errorMessage = "Did you grant the app permission to connect?";
+                } else {
+                    errorMessage = "An unknown error occurred.";
+                }
+
+                toast({
+                    title: "Error",
+                    description: errorMessage,
+                    variant: "error",
+                });
+            }
+        } catch (error: any) {
+            console.error(error.message);
+            toast({
+                title: "Error",
+                description: "An error occurred: " + error.message,
+                variant: "error",
+            });
+        }
+    }
     return (
         <div>
-            {userName != null ? (
+            {user != null ? (
                 <>
                     <div className="w-full mt-20">
-                        <Hi userName={userName} />
+                        <Hi userName={user.email} />
                     </div>
                     <div className="w-full flex justify-center mt-10 gap-10 items-start">
                         <div className="flex flex-col bg-white p-[2rem] rounded-3xl">

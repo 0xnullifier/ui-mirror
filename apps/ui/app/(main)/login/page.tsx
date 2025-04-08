@@ -118,7 +118,7 @@ export default function Login() {
     //   }
     // })
     // setLoading(false)
-    router.push(`/user/dashboard?user=${email.split("@")[0]}`)
+    router.push(`/user/dashboard`)
   };
 
   // load the custodians from the backend
