@@ -190,7 +190,6 @@ export default function Page(
                 <>
                     <div className="w-full mt-20">
                         <Hi userName={userName} />
-                        <Stats />
                     </div>
                     <div className="w-full flex justify-center mt-10 gap-10 items-start">
                         <div className="flex flex-col bg-white p-[2rem] rounded-3xl">

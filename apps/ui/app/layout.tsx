@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { GeistSans } from "geist/font/sans"; // import font
 import "../styles/globals.css";
 import { Footer } from "@/components/footer";
-import { CustodianDataWrapper } from "@/components/CustodianDataWrapper";
 import { Suspense } from "react";
 import { Toaster } from "@/components/Toaster";
 
@@ -24,9 +23,7 @@ export default function RootLayout({
       <body>
         <Toaster />
         <Suspense fallback={<div>loading...</div>}>
-          <CustodianDataWrapper>
-            {children}
-          </CustodianDataWrapper>
+          {children}
         </Suspense>
       </body>
     </html >
